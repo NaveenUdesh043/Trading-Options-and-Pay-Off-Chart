@@ -1,0 +1,295 @@
+package com.naveen.payoffchartui
+
+import android.graphics.Paint
+import android.graphics.Typeface
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import com.gtn.uilibrary.R
+import com.gtn.uilibrary.coreui.theme.LocalCustomColorsPalette
+import com.gtn.uilibrary.util.noRippleClickable
+import com.gtn.uilibrary.util.scale.scaleFontSize
+import com.gtn.uilibrary.util.scale.scaleHeight
+import com.gtn.uilibrary.util.scale.scaleWidth
+import com.gtn.uilibrary.view.optionProfie.widgets.BreakEvenTag
+
+@Composable
+fun PayOffChart(
+    maxLostX: Float = 10f,
+    maxLostY: Float = -4f,
+    strikeX: Float = 100f,
+    strikeY: Float = -4f,
+    breakEvenPriceX: Float = 225f,
+    breakEvenPriceY: Float = 0f,
+    maxProfitX: Float = 387f,
+    maxProfitY: Float = 5f,
+    canvasWidth: Dp = 351.dp,
+    canvasHeight: Dp = 380.dp,
+    padding: Dp = 60.dp,
+    lineColorRed: Color = LocalCustomColorsPalette.current.figmaColors.Negative0,
+    lineColorGreen: Color = LocalCustomColorsPalette.current.figmaColors.Success0,
+    lineWidth: Float = 4f,
+    gradientColor: Color = Color.Gray,
+    onExplanationClick: () -> Unit = {},
+) {
+    val canvasWidthPx = with(LocalDensity.current) { canvasWidth.toPx() }
+    val canvasHeightPx = with(LocalDensity.current) { canvasHeight.toPx() }
+    val paddingPx = with(LocalDensity.current) { padding.toPx() }
+
+    val xRange = maxProfitX - maxLostX
+    val yRange = maxProfitY - maxLostY
+
+    val xScale = (canvasWidthPx - paddingPx * 2) / xRange
+    val yScale = (canvasHeightPx - paddingPx * 2) / yRange
+
+    val yOffset = canvasHeightPx - paddingPx - (-maxLostY * yScale)
+
+    val maxLost = Offset(paddingPx + (maxLostX * xScale), yOffset - (maxLostY * yScale))
+    val strikePriceOffset = Offset(paddingPx + (strikeX * xScale), yOffset - (strikeY * yScale))
+    val breakEven = Offset(paddingPx + (breakEvenPriceX * xScale), yOffset - (breakEvenPriceY * yScale))
+    val maxProfit = Offset(paddingPx + (maxProfitX * xScale), yOffset - (maxProfitY * yScale))
+
+    val greenColor = LocalCustomColorsPalette.current.figmaColors.Success0
+    val redColor = LocalCustomColorsPalette.current.figmaColors.Negative0
+    val greyColor = LocalCustomColorsPalette.current.figmaColors.Typography80
+
+    Box(
+        modifier =
+            Modifier
+                .size(canvasWidth, canvasHeight)
+                .background(color = Color.White),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .width(120f.scaleWidth())
+                    .height(50f.scaleHeight())
+                    .padding(start = 20f.scaleWidth(), top = 24f.scaleHeight()),
+        ) {
+            Text(
+                text = stringResource(id = R.string.PAY_OFF),
+                fontSize = 16f.scaleFontSize(),
+                fontFamily = FontFamily(Font(R.font.montserrat_semi_bold)),
+                fontWeight = FontWeight.Medium,
+                color = LocalCustomColorsPalette.current.figmaColors.Typography50,
+            )
+            Spacer(modifier = Modifier.width(4f.scaleWidth()))
+            Icon(
+                painter = painterResource(id = R.drawable.info_option),
+                contentDescription = "Search",
+                tint = LocalCustomColorsPalette.current.figmaColors.Grey60,
+                modifier =
+                    Modifier
+                        .padding(1.dp)
+                        .size(20f.scaleWidth())
+                        .noRippleClickable { onExplanationClick() },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16f.scaleHeight()))
+
+        Box(
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Canvas(
+                modifier =
+                    Modifier
+                        .size(canvasWidth, canvasHeight)
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = 32f.scaleHeight(), end = 8f.scaleWidth()),
+            ) {
+                clipRect {
+                    val yAxisX = paddingPx
+
+                    fun drawArrowhead(
+                        color: Color,
+                        point: Offset,
+                        angle: Float,
+                        size: Float,
+                        strokeWidth: Float = 4f,
+                    ) {
+                        val arrowLeft =
+                            Offset(
+                                x = point.x - size * kotlin.math.cos(angle - Math.PI.toFloat() / 6),
+                                y = point.y - size * kotlin.math.sin(angle - Math.PI.toFloat() / 6),
+                            )
+                        val arrowRight =
+                            Offset(
+                                x = point.x - size * kotlin.math.cos(angle + Math.PI.toFloat() / 6),
+                                y = point.y - size * kotlin.math.sin(angle + Math.PI.toFloat() / 6),
+                            )
+                        drawLine(color, start = point, end = arrowLeft, strokeWidth = strokeWidth)
+                        drawLine(color, start = point, end = arrowRight, strokeWidth = strokeWidth)
+                    }
+
+                    drawLine(lineColorRed, maxLost, strikePriceOffset, strokeWidth = lineWidth)
+                    drawArrowhead(lineColorRed, maxLost, angle = Math.PI.toFloat(), size = 20f)
+
+                    drawLine(lineColorRed, strikePriceOffset, breakEven, strokeWidth = lineWidth)
+                    drawLine(lineColorGreen, breakEven, maxProfit, strokeWidth = lineWidth)
+                    drawArrowhead(lineColorGreen, maxProfit, angle = -Math.PI.toFloat() / 3, size = 25f)
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "Max Loss",
+                        maxLost.x - 50f,
+                        maxLost.y + 50f,
+                        Paint().apply {
+                            color = redColor.toArgb()
+                            textSize = 25f
+                            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                        },
+                    )
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "Max Profit Unlimited",
+                        maxProfit.x - 280f,
+                        maxProfit.y - 20f,
+                        Paint().apply {
+                            color = greenColor.toArgb()
+                            textSize = 25f
+                            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                        },
+                    )
+
+                    // Existing labels
+                    drawContext.canvas.nativeCanvas.apply {
+                        val paint =
+                            Paint().apply {
+                                color = greyColor.toArgb()
+                                textSize = 24f
+                            }
+
+                        drawText(String.format("%.0f", maxLostY), yAxisX - 60f, yOffset - (maxLostY * yScale), paint)
+                        drawText(String.format("%.0f", strikeY), yAxisX - 60f, yOffset - (strikeY * yScale), paint)
+                        drawText(String.format("%.0f", strikeX), paddingPx + (strikeX * xScale), yOffset + 20f, paint)
+                        drawText(String.format("%.0f", breakEvenPriceX), paddingPx + (breakEvenPriceX * xScale), yOffset + 20f, paint)
+                        drawText(String.format("%.0f", maxProfitX), paddingPx + (maxProfitX * xScale), yOffset + 15f, paint)
+
+                        val verticalTextPaint =
+                            Paint().apply {
+                                color = greyColor.toArgb()
+                                textSize = 20f
+                                textAlign = Paint.Align.CENTER
+                            }
+
+                        save()
+                        translate(paddingPx - 80f, canvasHeightPx / 2)
+                        rotate(-90f)
+                        drawText("Profit or Loss at Expiration", 0f, 0f, verticalTextPaint)
+                        restore()
+                    }
+
+                    fun drawDashedLine(
+                        start: Offset,
+                        end: Offset,
+                    ) {
+                        drawLine(
+                            color = gradientColor.copy(alpha = 0.2f),
+                            start = start,
+                            end = end,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+                            strokeWidth = 2f,
+                        )
+                    }
+
+                    val yInterval = 10f
+                    for (i in 0..(yRange / yInterval).toInt()) {
+                        val yValue = maxLostY + i * yInterval
+                        val xPos = paddingPx + (maxLostX * xScale)
+                        val yPos = yOffset - (yValue * yScale)
+                        drawDashedLine(Offset(xPos, paddingPx), Offset(xPos, yPos))
+                    }
+
+                    drawDashedLine(
+                        Offset(paddingPx + (maxLostX * xScale), paddingPx),
+                        Offset(paddingPx + (maxLostX * xScale), yOffset - (maxLostY * yScale)),
+                    )
+                    drawDashedLine(
+                        Offset(paddingPx + (strikeX * xScale), paddingPx),
+                        Offset(paddingPx + (strikeX * xScale), yOffset - (strikeY * yScale)),
+                    )
+                    drawDashedLine(
+                        Offset(paddingPx + (breakEvenPriceX * xScale), paddingPx),
+                        Offset(paddingPx + (breakEvenPriceX * xScale), canvasHeightPx - paddingPx),
+                    )
+                    drawDashedLine(
+                        Offset(paddingPx + (maxProfitX * xScale), paddingPx),
+                        Offset(paddingPx + (maxProfitX * xScale), canvasHeightPx - paddingPx),
+                    )
+                    drawDashedLine(
+                        Offset(paddingPx, yOffset - (breakEvenPriceY * yScale)),
+                        Offset(canvasWidthPx - paddingPx, yOffset - (breakEvenPriceY * yScale)),
+                    )
+                }
+            }
+
+            with(LocalDensity.current) {
+                Box(
+                    modifier =
+                        Modifier
+                            .offset(
+                                x = breakEven.x.toDp() - 150.dp,
+                                y = breakEven.y.toDp() - 20.dp,
+                            )
+                            .zIndex(1f),
+                ) {
+                    BreakEvenTag(label = "Break-Even", value = "225.90")
+                }
+            }
+
+            Box(
+                modifier =
+                    Modifier
+                        .width(179f.scaleWidth())
+                        .wrapContentHeight()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16f.scaleHeight()),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.UNDERLYING_PRICE_EXPIRATION),
+                    fontSize = 11f.scaleFontSize(),
+                    fontFamily = FontFamily(Font(R.font.montserrat_regular)),
+                    fontWeight = FontWeight.Medium,
+                    color = LocalCustomColorsPalette.current.figmaColors.Typography80,
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewPayOffChart() {
+    PayOffChart()
+}
